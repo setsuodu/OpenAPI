@@ -1,0 +1,47 @@
+name: Deploy Redoc to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'   # 或 9.0.x
+
+      - name: Restore & Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+
+      - name: Publish & Generate openapi.json
+        run: |
+          dotnet publish -c Release --no-build -o publish
+          # 使用 Swashbuckle 的命令行工具生成（推荐）
+          dotnet tool install --global Swashbuckle.AspNetCore.Cli
+          dotnet swagger tofile --output ./docs/openapi.json ./publish/MyApi.dll v1
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs   # 整个 docs 文件夹（含 index.html 和 openapi.json）
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

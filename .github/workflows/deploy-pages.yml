@@ -1,8 +1,8 @@
-name: Deploy Redoc to GitHub Pages
+name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -10,38 +10,51 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'   # 或 9.0.x
+          dotnet-version: '8.0.x'
 
-      - name: Restore & Build
+      - name: Restore & Publish
         run: |
           dotnet restore
-          dotnet build --no-restore -c Release
+          dotnet publish -c Release --no-restore -o github-pages
 
-      - name: Publish & Generate openapi.json
+      - name: Generate OpenAPI JSON
         run: |
-          dotnet publish -c Release --no-build -o publish
-          # 使用 Swashbuckle 的命令行工具生成（推荐）
-          dotnet tool install --global Swashbuckle.AspNetCore.Cli
-          dotnet swagger tofile --output ./docs/openapi.json ./publish/MyApi.dll v1
+          cd github-pages
+          ./src --urls http://localhost:5000 & PID=$!
+          sleep 5
+          curl http://localhost:5000/openapi.json -o ../openapi.json
+          kill $PID
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Copy docs & openapi.json to output
+        run: |
+          cp -r docs/* github-pages/
+          cp openapi.json github-pages/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs   # 整个 docs 文件夹（含 index.html 和 openapi.json）
+          path: ./github-pages
 
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

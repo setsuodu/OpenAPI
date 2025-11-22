@@ -27,21 +27,15 @@ app.MapGet("/hello", () => Results.Ok(new { message = "Hello from Minimal API!" 
 // 关键：正确生成 openapi.json 到 ../docs
 app.Lifetime.ApplicationStarted.Register(async () =>
 {
-    await Task.Yield();
-
-    // 正确获取 SwaggerGenerator（这是 Swashbuckle 内部的实现）
-    var swaggerGenerator = app.Services.GetRequiredService<ISwaggerProvider>();
-    var swaggerDoc = swaggerGenerator.GetSwagger("v1");
-
-    var docsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "docs");
-    Directory.CreateDirectory(docsDir);
-    var filePath = Path.Combine(docsDir, "openapi.json");
-
-    await using var stream = File.Create(filePath);
+    await Task.Delay(100);
+    var doc = app.Services.GetRequiredService<ISwaggerProvider>().GetSwagger("v1");
+    var path = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "docs", "openapi.json");
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    //await File.WriteAllTextAsync(path, doc.SerializeAsV3AsJson(null));
+    await using var stream = File.Create(path);
     await using var writer = new StreamWriter(stream);
-    swaggerDoc.SerializeAsV3(new Microsoft.OpenApi.Writers.OpenApiJsonWriter(writer));
-
-    Console.WriteLine($"OpenAPI 已生成: {Path.GetFullPath(filePath)}");
+    doc.SerializeAsV3(new Microsoft.OpenApi.Writers.OpenApiJsonWriter(writer));
+    Console.WriteLine($"OpenAPI 已生成: {Path.GetFullPath(path)}");
 });
 
 app.Run();

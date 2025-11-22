@@ -1,0 +1,23 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "MyApi",
+    "version": "v1"
+  },
+  "paths": {
+    "/hello": {
+      "get": {
+        "tags": [
+          "Demo"
+        ],
+        "operationId": "Hello",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": { }
+}

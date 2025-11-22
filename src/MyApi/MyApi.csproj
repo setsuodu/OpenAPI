@@ -1,18 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-	<!-- 发布为单文件方便 Pages -->
-	<PublishSingleFile>true</PublishSingleFile>
-	<SelfContained>true</SelfContained>
-	<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- 发布时也生成 openapi.json -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
 
-  <ItemGroup>
-	<PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
-	<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+	</ItemGroup>
 
 </Project>

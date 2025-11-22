@@ -1,54 +1,47 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿// Program.cs 顶部加入
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
-// 添加 OpenAPI/Swagger 支持
+var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MyApi", Version = "v1" });
+});
 
 var app = builder.Build();
 
-// 配置 Swagger JSON 路径（固定为 /openapi.json，方便 Pages 直接访问）
-app.UseSwagger(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.RouteTemplate = "openapi.json";
-    c.SerializeAsV2 = false;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// 直接在根目录提供 Redoc（docs/index.html 内容见下文）
-app.UseStaticFiles(); // 让 docs 文件夹可以被访问
-
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/openapi.json", "My API V1");
-    // 可选：直接用 Swagger UI 访问 /swagger
-});
-
-var summaries = new[] { "Sunny", "Cloudy", "Rainy" };
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi()
-.WithTags("Weather");
-
-// 最简 Hello 示例
-app.MapGet("/hello", () => "Hello from Minimal API!")
+app.MapGet("/hello", () => Results.Ok(new { message = "Hello from Minimal API!" }))
    .WithName("Hello")
    .WithOpenApi()
    .WithTags("Demo");
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+// 关键：正确生成 openapi.json 到 ../docs
+app.Lifetime.ApplicationStarted.Register(async () =>
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    await Task.Yield();
+
+    // 正确获取 SwaggerGenerator（这是 Swashbuckle 内部的实现）
+    var swaggerGenerator = app.Services.GetRequiredService<ISwaggerProvider>();
+    var swaggerDoc = swaggerGenerator.GetSwagger("v1");
+
+    var docsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "docs");
+    Directory.CreateDirectory(docsDir);
+    var filePath = Path.Combine(docsDir, "openapi.json");
+
+    await using var stream = File.Create(filePath);
+    await using var writer = new StreamWriter(stream);
+    swaggerDoc.SerializeAsV3(new Microsoft.OpenApi.Writers.OpenApiJsonWriter(writer));
+
+    Console.WriteLine($"OpenAPI 已生成: {Path.GetFullPath(filePath)}");
+});
+
+app.Run();

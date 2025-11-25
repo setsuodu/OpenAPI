@@ -1,28 +1,54 @@
-name: Deploy to GitHub Pages
+name: Deploy ReDoc to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: ["main"]         # 推 main 分支时触发
+  workflow_dispatch:           # 允许手动触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: '8.0.x'
 
-      - name: Build & Publish
+      - name: Restore & Build
         run: |
-          dotnet publish src/MyApi/MyApi.csproj -c Release -o publish
+          dotnet restore
+          dotnet build --no-restore -c Release
 
-      # publish 目录下已经运行过 Program.cs，openapi.json 已生成在项目根 docs/
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Publish (触发生成 openapi.json)
+        run: |
+          dotnet publish -c Release --no-build -o publish
+
+      # 复制生成的 wwwroot 内容到准备上传的目录
+      - name: Prepare GitHub Pages files
+        run: |
+          mkdir -p ./gh-pages
+          cp -r publish/wwwroot/* ./gh-pages/
+          # 如果你想把根目录也放进去（可选）
+          cp -r publish/wwwroot/redoc ./gh-pages/redoc
+          cp publish/wwwroot/openapi.json ./gh-pages/openapi.json
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          force_orphan: true
+          path: ./gh-pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

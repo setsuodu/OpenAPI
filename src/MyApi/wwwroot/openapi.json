@@ -16,6 +16,19 @@
           }
         }
       }
+    },
+    "/hello": {
+      "get": {
+        "tags": [
+          "MyApi"
+        ],
+        "operationId": "Hello",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": { }
